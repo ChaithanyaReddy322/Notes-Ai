@@ -22,13 +22,31 @@ const PORT = process.env.PORT || 5000;
 CORS Middleware
 ---------------------------- */
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://notes-ai-kappa-gules.vercel.app",
+  "https://notes-alwkbrigm-chaithanyareddy322s-projects.vercel.app"
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://notes-ai-kappa-gules.vercel.app",
-      "https://notes-alwkbrigm-chaithanyareddy322s-projects.vercel.app"
-    ],
+    origin: function (origin, callback) {
+
+      // allow requests with no origin (mobile apps, curl, postman)
+      if (!origin) return callback(null, true);
+
+      // allow whitelisted domains
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // allow any vercel preview deployment
+      if (origin.includes("vercel.app")) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
   })
