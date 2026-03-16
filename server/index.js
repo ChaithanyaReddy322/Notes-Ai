@@ -26,7 +26,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://notes-ai-kappa-gules.vercel.app"
+      "https://notes-ai-kappa-gules.vercel.app",
+      "https://notes-alwkbrigm-chaithanyareddy322s-projects.vercel.app"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
