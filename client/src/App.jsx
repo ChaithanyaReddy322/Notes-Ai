@@ -10,7 +10,7 @@ import Pricing from './pages/Pricing'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailed from './pages/PaymentFailed'
 
-export const serverUrl = "http://localhost:5000"
+export const serverUrl = "https://notes-ai-f0o3.onrender.com"
 
 function App() {
   const dispatch = useDispatch()
