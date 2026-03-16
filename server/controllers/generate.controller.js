@@ -1,101 +1,94 @@
-import Notes from "../models/notes.model.js";
-import UserModel from "../models/user.model.js";
-import { generateGeminiResponse } from "../services/gemini.services.js";
-import { buildPrompt } from "../utils/promptBuilder.js";
-
 export const generateNotes = async (req, res) => {
-try {
-const {
-topic,
-classLevel,
-examType,
-revisionMode = false,
-includeDiagram = false,
-includeChart = false
-} = req.body;
+  try {
 
-```
-if (!topic) {
-  return res.status(400).json({
-    message: "Topic is required"
-  });
-}
+    const {
+      topic,
+      classLevel,
+      examType,
+      revisionMode = false,
+      includeDiagram = false,
+      includeChart = false
+    } = req.body;
 
-const user = await UserModel.findById(req.userId);
+    if (!topic) {
+      return res.status(400).json({ message: "Topic is required" });
+    }
 
-if (!user) {
-  return res.status(404).json({
-    message: "User not found"
-  });
-}
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-if (user.credits < 10) {
-  user.isCreditAvailable = false;
-  await user.save();
+    const user = await UserModel.findById(req.userId);
 
-  return res.status(403).json({
-    message: "Insufficient credits"
-  });
-}
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-const prompt = buildPrompt({
-  topic,
-  classLevel,
-  examType,
-  revisionMode,
-  includeDiagram,
-  includeChart
-});
+    if (user.credits < 10) {
+      user.isCreditAvailable = false;
+      await user.save();
 
-const aiResponse = await generateGeminiResponse(prompt);
+      return res.status(403).json({
+        message: "Insufficient credits"
+      });
+    }
 
-if (!aiResponse) {
-  return res.status(500).json({
-    message: "Failed to generate notes from AI"
-  });
-}
+    const prompt = buildPrompt({
+      topic,
+      classLevel,
+      examType,
+      revisionMode,
+      includeDiagram,
+      includeChart
+    });
 
-const notes = await Notes.create({
-  user: user._id,
-  topic,
-  classLevel,
-  examType,
-  revisionMode,
-  includeDiagram,
-  includeChart,
-  content: aiResponse
-});
+    const aiResponse = await generateGeminiResponse(prompt);
 
-user.credits -= 10;
+    if (!aiResponse || typeof aiResponse !== "string") {
+      return res.status(500).json({
+        message: "AI failed to generate notes"
+      });
+    }
 
-if (user.credits <= 0) {
-  user.isCreditAvailable = false;
-}
+    const notes = await Notes.create({
+      user: user._id,
+      topic,
+      classLevel,
+      examType,
+      revisionMode,
+      includeDiagram,
+      includeChart,
+      content: aiResponse
+    });
 
-if (!Array.isArray(user.notes)) {
-  user.notes = [];
-}
+    user.credits -= 10;
 
-user.notes.push(notes._id);
+    if (user.credits <= 0) {
+      user.isCreditAvailable = false;
+    }
 
-await user.save();
+    if (!Array.isArray(user.notes)) {
+      user.notes = [];
+    }
 
-return res.status(200).json({
-  data: aiResponse,
-  noteId: notes._id,
-  creditsLeft: user.credits
-});
-```
+    user.notes.push(notes._id);
 
-} catch (error) {
-console.error("Generate Notes Error:", error);
+    await user.save();
 
-```
-return res.status(500).json({
-  error: "AI generation failed",
-  message: error.message
-});
-```
+    return res.status(200).json({
+      data: aiResponse,
+      noteId: notes._id,
+      creditsLeft: user.credits
+    });
 
-}
+  } catch (error) {
+
+    console.error("Generate Notes Error:", error);
+
+    return res.status(500).json({
+      error: "AI generation failed",
+      message: error.message
+    });
+
+  }
 };

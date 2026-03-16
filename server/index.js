@@ -18,9 +18,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-/* ---------------------------
-CORS Middleware
----------------------------- */
+/* CORS */
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -30,69 +28,69 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin: (origin, callback) => {
 
-      // allow requests with no origin (mobile apps, curl, postman)
       if (!origin) return callback(null, true);
 
-      // allow whitelisted domains
-      if (allowedOrigins.includes(origin)) {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
         return callback(null, true);
       }
 
-      // allow any vercel preview deployment
-      if (origin.includes("vercel.app")) {
-        return callback(null, true);
-      }
-
-      return callback(null, false);
+      return callback(new Error("CORS not allowed"));
     },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    credentials: true
   })
 );
 
-/* ---------------------------
-Stripe Webhook
-MUST come before express.json()
----------------------------- */
-
+/* Stripe Webhook */
 app.post(
   "/api/credits/webhook",
   express.raw({ type: "application/json" }),
   stripeWebhook
 );
 
-/* ---------------------------
-Middleware
----------------------------- */
-
+/* Middleware */
 app.use(express.json());
 app.use(cookieParser());
 
-/* ---------------------------
-Health Check Route
----------------------------- */
-
+/* Health Check */
 app.get("/", (req, res) => {
   res.json({ message: "ExamNotes AI Backend Running 🚀" });
 });
 
-/* ---------------------------
-API Routes
----------------------------- */
-
+/* Routes */
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/notes", notesRouter);
 app.use("/api/pdf", pdfRouter);
 app.use("/api/credit", creditRouter);
 
-/* ---------------------------
-Start Server
----------------------------- */
-
-app.listen(PORT, async () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  await connectDb();
+/* Global Error Handler */
+app.use((err, req, res, next) => {
+  console.error("Server Error:", err);
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal Server Error"
+  });
 });
+
+/* Start Server */
+
+const startServer = async () => {
+  try {
+
+    await connectDb();
+
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("Database connection failed:", error);
+  }
+};
+
+startServer();
